@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distribuição de Resgates</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            --primary: #ffcc00;
+            --dark-bg: #121212;
+            --card-bg: #1e1e1e;
+            --accent-blue: #1e88e5;
+            --accent-green: #2e7d32;
+            --accent-red: #c62828;
+            --accent-purple: #9c27b0;
+            --accent-pink: #e91e63;
+            --accent-teal: #009688;
+            --accent-orange: #ff9800;
+            --driver-blue: #1e88e5;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #f1f1f1;
+            padding: 20px;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 204, 0, 0.2);
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+            position: relative;
+            display: inline-block;
+        }
+        
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 4px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+        
+        .subtitle {
+            color: #aaa;
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto 15px;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-connected {
+            background-color: #4caf50;
+            box-shadow: 0 0 8px #4caf50;
+        }
+        
+        .status-disconnected {
+            background-color: #f44336;
+        }
+        
+        .panel {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .panel-title {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+            justify-content: center;
+        }
+        
+        .panel-title i {
+            font-size: 1.3rem;
+        }
+        
+        #motoboysContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .motoboy-btn {
+            flex: 1;
+            min-width: 150px;
+            max-width: 200px;
+            padding: 14px 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            background: var(--accent-blue);
+            color: white;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .motoboy-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .motoboy-btn.selected {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(2, 255, 15, 0.7);
+        }
+        
+        .motoboy-btn.ANDERSON.selected { 
+    background: linear-gradient(135deg, #FF7700, #E56E00);
+    box-shadow: 0 0 15px rgba(255, 119, 0, 0.7);
+}
+.motoboy-btn.FELIPE.selected { 
+    background: linear-gradient(135deg, #FFD700, #D4AF37);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+}
+.motoboy-btn.HENRIQUE.selected { 
+    background: linear-gradient(135deg, #FF218C, #D6006E);
+    box-shadow: 0 0 15px rgba(255, 33, 140, 0.7);
+}
+.motoboy-btn.KAUÊ.selected { 
+    background: linear-gradient(135deg, #8A2BE2, #6A0DAD);
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.7);
+}
+.motoboy-btn.MAX.selected { 
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    box-shadow: 0 0 15px rgba(37, 211, 102, 0.7);
+}
+.motoboy-btn.SAMUEL.selected { 
+    background: linear-gradient(135deg, #00FFFF, #00B7EB);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+}
+        
+        /* CORREÇÃO DO BADGE - MELHOR VISIBILIDADE */
+        .badge {
+    background: #fff; /* Vermelho para maior contraste */
+    color: #000; /* Texto branco */
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px; /* espaço entre o nome e o badge */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    border: 1px solid green;
+    animation: pulse 1.5s infinite;
+}
+
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .badge.show {
+            display: inline-block;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 15px;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 204, 0, 0.3);
+            background: rgba(30, 30, 30, 0.8);
+            color: #fff;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        button {
+            flex: 1;
+            min-width: 150px;
+            max-width: 300px;
+            padding: 14px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .wa-btn {
+            background-color: #25d366;
+            color: #fff;
+        }
+        
+        .driver-btn {
+            background-color: var(--driver-blue);
+            color: #fff;
+        }
+        
+        .wa-btn:hover {
+            background-color: #128c7e;
+        }
+        
+        .driver-btn:hover {
+            background-color: #0d5d9c;
+        }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .card {
+            background: linear-gradient(145deg, #252525, #1a1a1a);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 204, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        .card h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 204, 0, 0.3);
+            text-align: center;
+        }
+        
+        .atendimentos-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .atendimento {
+            background-color: #2a2a2a;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid transparent;
+        }
+        
+        .atendimento:hover {
+            background-color: #333;
+            transform: translateX(5px);
+        }
+        
+        .atendimento.agrupado {
+            border-left-color: var(--primary);
+        }
+        
+        .motoboy-tag {
+            background: rgba(255, 204, 0, 0.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .star-icon {
+            color: #ffcc00;
+            margin-left: 5px;
+            font-size: 16px;
+        }
+        
+        .grupo-atendimentos {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed rgba(255, 204, 0, 0.3);
+        }
+        
+        .grupo-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #ffcc00;
+        }
+        
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        #modalContent {
+            background: linear-gradient(145deg, #252525, #1a1a1a);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 204, 0, 0.3);
+            animation: modalAppear 0.4s ease-out;
+        }
+        
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        #modalText {
+            color: var(--primary);
+            font-size: 1.4rem;
+            margin-bottom: 25px;
+            line-height: 1.5;
+            text-align: center;
+        }
+        
+        .modal-btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .modal-btn {
+            padding: 12px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        
+        .modal-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .confirm {
+            background: var(--accent-green);
+            color: #fff;
+        }
+        
+        .confirm:hover {
+            background: #1b5e20;
+        }
+        
+        .cancel {
+            background: var(--accent-red);
+            color: #fff;
+        }
+        
+        .cancel:hover {
+            background: #b71c1c;
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(30, 30, 30, 0.7);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 204, 0, 0.1);
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px 20px;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #777;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Modal de Motoristas */
+        #modalDrivers {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(8px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        #driversContent {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(30, 136, 229, 0.5);
+            animation: modalAppear 0.5s ease-out;
+            position: relative;
+        }
+        
+      /* Estilos para todos os dispositivos */
+.close-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: #c62828;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1200;
+    transition: all 0.3s ease;
+    display: block;
+}
+
+.close-btn:hover {
+    background: #b71c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Media queries para diferentes tamanhos de tela */
+@media (max-width: 1200px) {
+    .close-btn {
+        top: 12px;
+        right: 12px;
+        padding: 9px 16px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 992px) {
+    .close-btn {
+        top: 10px;
+        right: 10px;
+        padding: 8px 14px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .close-btn {
+        top: 8px;
+        right: 8px;
+        padding: 7px 12px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 576px) {
+    .close-btn {
+        top: 6px;
+        right: 6px;
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 4px;
+        /* Garante visibilidade em telas pequenas */
+        min-width: 70px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 400px) {
+    .close-btn {
+        top: 5px;
+        right: 5px;
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+}
+
+/* Orientação paisagem em dispositivos móveis */
+@media (max-width: 768px) and (orientation: landscape) {
+    .close-btn {
+        position: absolute;
+        top: 5px;
+        right: 3px;
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+}
+        
+        .drivers-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .drivers-header h1 {
+            color: var(--driver-blue);
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(30, 136, 229, 0.5);
+        }
+        
+        .drivers-header p {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+        
+        #searchInput {
+            width: 100%;
+            padding: 14px 20px;
+            margin-bottom: 25px;
+            border-radius: 50px;
+            border: 2px solid rgba(30, 136, 229, 0.5);
+            background: rgba(10, 20, 40, 0.7);
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        #searchInput:focus {
+            outline: none;
+            border-color: var(--driver-blue);
+            box-shadow: 0 0 15px rgba(30, 136, 229, 0.5);
+            background: rgba(10, 20, 40, 0.9);
+        }
+        
+        #searchInput::placeholder {
+            color: rgba(200, 200, 255, 0.5);
+        }
+        
+        #driversList {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--driver-blue) #0a1428;
+        }
+        
+        #driversList::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #driversList::-webkit-scrollbar-track {
+            background: #0a1428;
+            border-radius: 10px;
+        }
+        
+        #driversList::-webkit-scrollbar-thumb {
+            background-color: var(--driver-blue);
+            border-radius: 10px;
+        }
+        
+        .driver-btn-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 25px;
+            background: linear-gradient(90deg, rgba(30, 136, 229, 0.2), rgba(30, 136, 229, 0.1));
+            border-radius: 12px;
+            border: 1px solid rgba(30, 136, 229, 0.3);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .driver-btn-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: all 0.6s ease;
+        }
+        
+        .driver-btn-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(90deg, rgba(30, 136, 229, 0.3), rgba(30, 136, 229, 0.2));
+            border-color: rgba(30, 136, 229, 0.5);
+        }
+        
+        .driver-btn-item:hover::before {
+            left: 100%;
+        }
+        
+        .driver-btn-item .driver-name {
+            flex-grow: 1;
+        }
+        
+        .driver-btn-item .driver-phone {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: normal;
+            margin-left: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .card-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .motoboy-btn {
+                min-width: 120px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 100%;
+            }
+            
+            .driver-btn-item {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 15px;
+            }
+            
+            .driver-btn-item .driver-phone {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+                text-align: center;
+            }
+            
+            #driversContent {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>📦 Resgates (SBC)</h1>
+        <p class="subtitle">Sistema em tempo real para distribuição de atendimentos</p>
+        <div class="connection-status">
+            <span class="status-indicator status-disconnected" id="statusIndicator"></span>
+            <span id="statusText">Conectando ao servidor...</span>
+        </div>
+    </header>
+    
+    <div class="panel">
+        <h2 class="panel-title">Selecione o Motoboy</h2>
+        <div id="motoboysContainer">
+            <button class="motoboy-btn ANDERSON" onclick="confirmarMotoboy('ANDERSON', this)">JUNIOR <span class="badge" id="badge-ANDERSON"></span></button>
+            <button class="motoboy-btn FELIPE" onclick="confirmarMotoboy('FELIPE', this)">FELIPE <span class="badge" id="badge-FELIPE"></span></button>
+            <button class="motoboy-btn HENRIQUE" onclick="confirmarMotoboy('HENRIQUE', this)">CHEFE <span class="badge" id="badge-HENRIQUE"></span></button>
+            <button class="motoboy-btn KAUÊ" onclick="confirmarMotoboy('KAUÊ', this)">KAUÊ <span class="badge" id="badge-KAUÊ"></span></button>
+            <button class="motoboy-btn MAX" onclick="confirmarMotoboy('MAX', this)">MAX <span class="badge" id="badge-MAX"></span></button>
+            <button class="motoboy-btn SAMUEL" onclick="confirmarMotoboy('SAMUEL', this)">SAMUEL <span class="badge" id="badge-SAMUEL"></span></button>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h2 class="panel-title">Lista de Atendimentos</h2>
+        <textarea id="inputAtendimentos" placeholder="Cole aqui os atendimentos do dia. Exemplo:
+
+NOME DA TÉCNICA
+(R1) 06:30
+
+(R3) 07:00*
+(R2) 07:10*"></textarea>
+        
+        <div class="button-group">
+            <button class="wa-btn" onclick="processarLista()">Processar Lista</button>
+            <button class="wa-btn" onclick="limparLista()">Limpar Lista</button>
+            <button class="driver-btn" onclick="abrirModalDrivers()">DRIVER</button>
+            <button class="wa-btn" onclick="enviarWhatsApp()">ENVIAR PARA WHATSAPP</button>
+        </div>
+    </div>
+    
+    <h2 class="panel-title">Atendimentos Distribuídos</h2>
+    <div id="listaAtendimentos" class="card-container"></div>
+    
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="totalAtendimentos">0</div>
+            <div class="stat-label">TOTAL ATENDIMENTOS</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="atribuidos">0</div>
+            <div class="stat-label">VOUCHERS ATRIBUÍDOS</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="livres">0</div>
+            <div class="stat-label">ATENDIMENTOS LIVRES</div>
+        </div>
+    </div>
+</div>
+
+<div id="modal">
+    <div id="modalContent">
+        <h3 id="modalText">Tem certeza?</h3>
+        <div class="modal-btn-group">
+            <button class="modal-btn confirm" onclick="acaoModal(true)">CONFIRMAR</button>
+            <button class="modal-btn cancel" onclick="acaoModal(false)">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Motoristas -->
+<div id="modalDrivers">
+    <div id="driversContent">
+        <button class="close-btn" onclick="fecharModalDrivers()">FECHAR</button>
+        <div class="drivers-header">
+            <h1>Drivers SBC</h1>
+            <p>Lista completa de contatos dos motoristas</p>
+        </div>
+        
+        <input type="text" id="searchInput" placeholder="Buscar por nome...">
+        
+        <div id="driversList"></div>
+    </div>
+</div>
+
+<footer>
+    Sistema de Distribuição de Resgates &copy; Max Trader / 2025 - Todos os Direitos Reservados.
+</footer>
+
+<script>
+// Configuração do Firebase com permissões corrigidas
+const firebaseConfig = {
+    apiKey: "AIzaSyB8LtDuCHeZthnZFqD5AQ6pHHSKpc_OXH8",
+    authDomain: "hub-sbc.firebaseapp.com",
+    databaseURL: "https://hub-sbc-default-rtdb.firebaseio.com",
+    projectId: "hub-sbc",
+    storageBucket: "hub-sbc.appspot.com",
+    messagingSenderId: "1057764999794",
+    appId: "1:1057764999794:web:d579fa8a266389abcaf8eb"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Elementos de status
+const statusIndicator = document.getElementById('statusIndicator');
+const statusText = document.getElementById('statusText');
+
+// Atualizar status da conexão
+db.ref(".info/connected").on("value", (snapshot) => {
+    if (snapshot.val() === true) {
+        statusIndicator.className = "status-indicator status-connected";
+        statusText.textContent = "Conectado ao banco de dados";
+    } else {
+        statusIndicator.className = "status-indicator status-disconnected";
+        statusText.textContent = "Desconectado - Atualizando localmente";
+    }
+});
+
+let motoboyAtual = null;
+let dados = {};
+let callbackModal = null;
+let ultimoItemClicado = null;
+
+function abrirModal(mensagem, callback) {
+    document.getElementById("modalText").textContent = mensagem;
+    document.getElementById("modal").style.display = "flex";
+    callbackModal = callback;
+}
+
+function acaoModal(confirmado) {
+    document.getElementById("modal").style.display = "none";
+    if (confirmado && typeof callbackModal === 'function') {
+        callbackModal();
+    }
+    callbackModal = null;
+}
+
+function confirmarMotoboy(nome, botao) {
+    document.querySelectorAll('.motoboy-btn').forEach(btn => btn.classList.remove('selected'));
+    motoboyAtual = nome;
+    botao.classList.add('selected');
+}
+
+function processarLista() {
+    const input = document.getElementById("inputAtendimentos").value.trim();
+    if (!input) { 
+        abrirModal("Por favor, cole os atendimentos antes de processar.", null);
+        return; 
+    }
+    
+    dados = {};
+    let tecnicaAtual = "";
+    let grupoId = 0;
+
+    // Dividir por linhas
+    const linhas = input.split("\n");
+    
+    for (let i = 0; i < linhas.length; i++) {
+        const linha = linhas[i].trim();
+        
+        if (linha === "") {
+            // Linha vazia: incrementa o grupoId para a próxima técnica
+            grupoId++;
+            continue;
+        }
+        
+        if (!linha.startsWith("(R")) {
+            // É o nome da técnica
+            tecnicaAtual = linha.toUpperCase();
+            if (!dados[tecnicaAtual]) {
+                dados[tecnicaAtual] = [];
+            }
+            // Resetar o grupoId quando muda de técnica
+            grupoId = 0;
+        } else {
+            // É um atendimento
+            const agrupado = linha.includes("*");
+            // Substituir * por ⭐ no texto de exibição
+            const horaExibicao = agrupado ? linha.replace(/\*$/, "") + " <span class='star-icon'>⭐</span>" : linha;
+            
+            dados[tecnicaAtual].push({ 
+                hora: linha, 
+                horaExibicao: horaExibicao,
+                motoboy: "", 
+                agrupado: agrupado,
+                grupoId: grupoId  // mesmo grupoId para todos do mesmo grupo
+            });
+        }
+    }
+    
+    // Salvar no Firebase
+    db.ref('atendimentos').set(dados)
+        .then(() => {
+            abrirModal("Lista processada com sucesso!", null);
+        })
+        .catch(error => {
+            abrirModal(`Erro ao salvar: ${error.message}`, null);
+            console.error("Detalhes do erro:", error);
+        });
+}
+
+// Listener para atualizações em tempo real
+db.ref('atendimentos').on('value', (snapshot) => {
+    if (snapshot.exists()) {
+        dados = snapshot.val();
+        renderizar();
+        atualizarContador();
+        atualizarEstatisticas();
+    } else {
+        dados = {};
+        renderizar();
+        atualizarContador();
+        atualizarEstatisticas();
+    }
+});
+
+function renderizar() {
+    const container = document.getElementById("listaAtendimentos");
+    container.innerHTML = "";
+
+    if (!dados || Object.keys(dados).length === 0) {
+        container.innerHTML = '<div class="card"><h2>Nenhum atendimento</h2><p>Processe uma lista de atendimentos para começar</p></div>';
+        return;
+    }
+
+    for (const tecnica in dados) {
+        const card = document.createElement("div");
+        card.className = "card";
+        const title = document.createElement("h2");
+        title.textContent = tecnica;
+        card.appendChild(title);
+        
+        const atendimentosContainer = document.createElement("div");
+        atendimentosContainer.className = "atendimentos-container";
+        card.appendChild(atendimentosContainer);
+
+        // Agrupar atendimentos por grupoId
+        const grupos = {};
+        dados[tecnica].forEach(item => {
+            if (!grupos[item.grupoId]) {
+                grupos[item.grupoId] = [];
+            }
+            grupos[item.grupoId].push(item);
+        });
+
+        // Para cada grupo, criar um bloco
+        Object.keys(grupos).sort().forEach(grupoId => {
+            const grupoDiv = document.createElement("div");
+            grupoDiv.className = "grupo-atendimentos";
+            
+            // Cabeçalho do grupo
+            const grupoHeader = document.createElement("div");
+            grupoHeader.className = "grupo-header";
+            
+            if (grupos[grupoId][0].agrupado) {
+                const primeiroHorario = grupos[grupoId][0].hora.replace("*", "");
+                const ultimoHorario = grupos[grupoId][grupos[grupoId].length - 1].hora.replace("*", "");
+                
+                grupoHeader.innerHTML = `<span>De: ${primeiroHorario}</span><span>Até: ${ultimoHorario}</span>`;
+                grupoDiv.appendChild(grupoHeader);
+            }
+            
+            grupos[grupoId].forEach(item => {
+                const div = document.createElement("div");
+                div.className = `atendimento ${item.agrupado ? 'agrupado' : ''}`;
+                
+                const horaSpan = document.createElement("span");
+                horaSpan.innerHTML = item.horaExibicao;
+                div.appendChild(horaSpan);
+                
+                if (item.motoboy) {
+                    const motoboySpan = document.createElement("span");
+                    motoboySpan.className = "motoboy-tag";
+                    motoboySpan.textContent = `@${item.motoboy}`;
+                    motoboySpan.style.backgroundColor = corMotoboy(item.motoboy);
+                    div.appendChild(motoboySpan);
+                }
+                
+                div.onclick = () => {
+                    if (!motoboyAtual) { 
+                        abrirModal("Por favor, selecione um motoboy antes.", null);
+                        return; 
+                    }
+                    
+                    // Armazena o contexto do item clicado
+                    ultimoItemClicado = { item, tecnica };
+                    
+                    // Caso 1: atendimento do mesmo motoboy → pedir confirmação antes de desmarcar
+                    if (item.motoboy === motoboyAtual) {
+                        abrirModal(`Deseja liberar o grupo de atendimentos?`, () => {
+                            desselecionarGrupo(tecnica, item.grupoId);
+                            salvarFirebase();
+                        });
+                    } 
+                    // Caso 2: atendimento livre → selecionar direto
+                    else if (!item.motoboy) {
+                        selecionarGrupo(tecnica, item.grupoId);
+                        salvarFirebase();
+                    } 
+                    // Caso 3: atendimento já selecionado por outro motoboy
+                    else {
+                        abrirModal(`Este atendimento já foi assumido por @${item.motoboy}`, null);
+                    }
+                };
+                
+                grupoDiv.appendChild(div);
+            });
+            atendimentosContainer.appendChild(grupoDiv);
+        });
+        container.appendChild(card);
+    }
+}
+
+function corMotoboy(nome) {
+    const cores = {
+        'MAX': '#25D366',       // Verde claro do WhatsApp
+        'HENRIQUE': '#FF218C',  // Rosa vibrante LGBTQI+
+        'ANDERSON': '#FF7700',  // Laranja vibrante
+        'FELIPE': '#FFD700',    // Amarelo ouro vibrante
+        'KAUÊ': '#8A2BE2',     // Roxo violeta vibrante
+        'SAMUEL': '#00FFFF'     // Ciano vibrante
+    };
+    return cores[nome] || '#2a2a2a';
+}
+
+function selecionarGrupo(tecnica, grupoId) {
+    dados[tecnica].forEach(item => {
+        if (item.grupoId == grupoId) {
+            item.motoboy = motoboyAtual;
+        }
+    });
+}
+
+function desselecionarGrupo(tecnica, grupoId) {
+    dados[tecnica].forEach(item => {
+        if (item.grupoId == grupoId) {
+            item.motoboy = "";
+        }
+    });
+}
+
+function salvarFirebase() {
+    db.ref('atendimentos').set(dados)
+        .then(() => {
+            console.log("Dados salvos com sucesso!");
+        })
+        .catch(error => {
+            abrirModal(`Erro ao salvar: ${error.message}`, null);
+            console.error("Detalhes do erro:", error);
+        });
+}
+
+function atualizarContador() {
+    let contagem = { ANDERSON:0, FELIPE:0, HENRIQUE:0, "KAUÊ":0, MAX:0, SAMUEL:0 };
+    
+    if (!dados) return;
+    
+    for (const tecnica in dados) {
+        // Para contar grupos por motoboy
+        const gruposPorMotoboy = {};
+        
+        // Primeiro, agrupar por grupoId
+        const grupos = {};
+        dados[tecnica].forEach(item => {
+            if (!grupos[item.grupoId]) {
+                grupos[item.grupoId] = [];
+            }
+            grupos[item.grupoId].push(item);
+        });
+        
+        // Para cada grupo
+        Object.keys(grupos).forEach(grupoId => {
+            const grupo = grupos[grupoId];
+            const primeiro = grupo[0];
+            
+            // Se o grupo inteiro está atribuído ao mesmo motoboy
+            if (primeiro.motoboy && grupo.every(item => item.motoboy === primeiro.motoboy)) {
+                // Contar apenas uma vez por grupo
+                if (!gruposPorMotoboy[primeiro.motoboy]) {
+                    gruposPorMotoboy[primeiro.motoboy] = new Set();
+                }
+                gruposPorMotoboy[primeiro.motoboy].add(grupoId);
+            } else {
+                // Se não está inteiro, contar individualmente
+                grupo.forEach(item => {
+                    if (item.motoboy) {
+                        contagem[item.motoboy]++;
+                    }
+                });
+            }
+        });
+        
+        // Agora, adicionar a contagem de grupos
+        Object.keys(gruposPorMotoboy).forEach(motoboy => {
+            contagem[motoboy] += gruposPorMotoboy[motoboy].size;
+        });
+    }
+    
+    Object.keys(contagem).forEach(nome => {
+        const badge = document.getElementById(`badge-${nome}`);
+        if (badge) {
+            badge.textContent = contagem[nome];
+            badge.classList.toggle('show', contagem[nome] > 0);
+        }
+    });
+}
+
+function atualizarEstatisticas() {
+    let total = 0;
+    let atribuidos = 0;
+    
+    if (!dados || Object.keys(dados).length === 0) {
+        document.getElementById('totalAtendimentos').textContent = total;
+        document.getElementById('atribuidos').textContent = atribuidos;
+        document.getElementById('livres').textContent = total - atribuidos;
+        return;
+    }
+    
+    for (const tecnica in dados) {
+        total += dados[tecnica].length;
+        dados[tecnica].forEach(item => {
+            if (item.motoboy) atribuidos++;
+        });
+    }
+    
+    document.getElementById('totalAtendimentos').textContent = total;
+    document.getElementById('atribuidos').textContent = atribuidos;
+    document.getElementById('livres').textContent = total - atribuidos;
+}
+
+function limparLista() {
+    abrirModal("Tem certeza que deseja limpar todos os dados?", () => {
+        document.getElementById("inputAtendimentos").value = "";
+        document.getElementById("listaAtendimentos").innerHTML = "";
+        dados = {};
+        db.ref('atendimentos').remove()
+            .then(() => {
+                console.log("Dados limpos com sucesso!");
+            })
+            .catch(error => {
+                console.error("Erro ao limpar dados:", error);
+            });
+        motoboyAtual = null;
+        document.querySelectorAll('.motoboy-btn').forEach(btn => btn.classList.remove('selected'));
+        atualizarContador();
+        atualizarEstatisticas();
+    });
+}
+
+function enviarWhatsApp() {
+    if (!dados || Object.keys(dados).length === 0) {
+        abrirModal("Não há dados para enviar. Processe a lista primeiro.", null);
+        return;
+    }
+    
+    let resgates = {};
+    for (const tecnica in dados) {
+        dados[tecnica].forEach(item => {
+            if (item.motoboy) {
+                if (!resgates[item.motoboy]) resgates[item.motoboy] = {};
+                if (!resgates[item.motoboy][tecnica]) resgates[item.motoboy][tecnica] = [];
+                resgates[item.motoboy][tecnica].push(item.hora);
+            }
+        });
+    }
+    
+    let mensagem = "📦 *RESGATES - DISTRIBUIÇÃO*\n\n";
+    for (const motoboy in resgates) {
+        mensagem += `*MOTOBOY: @${motoboy}*\n\n`;
+        for (const tecnica in resgates[motoboy]) {
+            let nomeFormatado = formatarNome(tecnica);
+            mensagem += `*${nomeFormatado}*\n`;
+            let horarios = resgates[motoboy][tecnica].sort();
+            horarios.forEach(h => {
+                mensagem += `- ${h}\n`;
+            });
+            mensagem += "\n";
+        }
+        mensagem += "------------------------\n\n";
+    }
+    
+    const link = "https://api.whatsapp.com/send?text=" + encodeURIComponent(mensagem);
+    window.open(link, "_blank");
+}
+
+function formatarNome(nome) {
+    let partes = nome.split(" ");
+    if (partes.length >= 3 && (partes[1].toLowerCase() === "de" || partes[1].toLowerCase() === "da")) {
+        return partes[0] + " " + partes[1] + " " + partes[2];
+    }
+    return partes[0] + " " + partes[1];
+}
+
+// Funções para o modal de motoristas
+function abrirModalDrivers() {
+    document.getElementById("modalDrivers").style.display = "flex";
+    carregarMotoristas();
+}
+
+function fecharModalDrivers() {
+    document.getElementById("modalDrivers").style.display = "none";
+}
+
+function carregarMotoristas(search = "") {
+    const driversList = document.getElementById("driversList");
+    driversList.innerHTML = "";
+    
+    // Lista de motoristas
+    const motoristas = [
+        { name: "Alberto Santana", phone: "11930146903" },
+        { name: "Claudiomar Celestino", phone: "11970277929" },
+        { name: "Clayton Alves", phone: "11980895022" },
+        { name: "Fabrizio Souza", phone: "11934389033" },
+        { name: "Fagner Oliveira", phone: "11951478442" },
+        { name: "Florisvaldo Brito", phone: "11996656583" },
+        { name: "Gilson Miranda", phone: "11976582026" },
+        { name: "Gilvanei", phone: "11914021045" },
+        { name: "Guilherme Barboza", phone: "11978060431" },
+        { name: "Jorge Luiz", phone: "11983902036" },
+        { name: "José Deusimar", phone: "11949070698" },
+        { name: "Leandro Ferreira", phone: "11963595032" },
+        { name: "Leonardo Borges", phone: "11989134866" },
+        { name: "Lucas Tadeu", phone: "11947709340" },
+        { name: "Manuel da Silva", phone: "11982123151" },
+        { name: "Muller Vieira", phone: "11988106930" },
+        { name: "Odair Mateus Dias", phone: "11962093315" },
+        { name: "Paulo Vicente", phone: "11920207944" },
+        { name: "Pedro Yvo", phone: "11938004207" },
+        { name: "Raul Pereira", phone: "11982405031" },
+        { name: "Renê Gomes", phone: "11987884690" },
+        { name: "Roberto Giannotti", phone: "11953169889" },
+        { name: "Romário Gama", phone: "11940758371" },
+        { name: "Sley", phone: "11991944785" },
+        { name: "Vinicius Borges", phone: "11948458175" },
+        { name: "Vinicius Gabriel", phone: "11978745402" },
+        { name: "Vinícius Henrique", phone: "11992711915" },
+        { name: "Welington Arten", phone: "11997279772" },
+        { name: "Wesley Santana", phone: "11959374288" }
+    ];
+    
+    // Filtrar se houver busca
+    let filtered = motoristas;
+    if (search) {
+        const term = search.toLowerCase();
+        filtered = motoristas.filter(driver => 
+            driver.name.toLowerCase().includes(term)
+        );
+    }
+    
+    // Ordenar alfabeticamente
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Adicionar à lista
+    filtered.forEach(driver => {
+        const btn = document.createElement("div");
+        btn.className = "driver-btn-item";
+        btn.innerHTML = `
+            <div class="driver-name">${driver.name}</div>
+            <div class="driver-phone">${driver.phone}</div>
+        `;
+        btn.addEventListener("click", () => {
+            window.open(`https://wa.me/55${driver.phone}`, "_blank");
+        });
+        driversList.appendChild(btn);
+    });
+}
+
+// Configurar busca
+document.getElementById("searchInput").addEventListener("input", function() {
+    carregarMotoristas(this.value);
+});
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', () => {
+    atualizarEstatisticas();
+    // Verificar se já temos dados no Firebase
+    db.ref('atendimentos').once('value').then(snapshot => {
+        if (snapshot.exists()) {
+            dados = snapshot.val();
+            renderizar();
+            atualizarContador();
+            atualizarEstatisticas();
+        }
+    });
+    
+    // Carregar motoristas na inicialização
+    carregarMotoristas();
+});
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
